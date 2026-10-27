@@ -1,0 +1,4 @@
+# Netlify: the invite is a static site, served straight from public/
+[build]
+  publish = "public"
+  command = ""
