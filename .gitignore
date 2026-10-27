@@ -5,3 +5,4 @@ test
 /WhatsApp*
 public/photos/WhatsApp*
 __pycache__/
+/*.mp3

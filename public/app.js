@@ -316,7 +316,7 @@
   // ── Music: an mp3 if configured, otherwise a generated music-box melody ──
   const Music = (function () {
     const btn = $("music");
-    let on = false, useSynth = false, audio, ctx, timer, next = 0, step = 0;
+    let on = false, useSynth = false, audio, fade, ctx, timer, next = 0, step = 0;
     // I–vi–IV–V in D major, arpeggiated
     const chords = [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]];
     const melody = [78, 76, 74, 76, 78, 81, 78, 0, 74, 76, 78, 76, 74, 71, 74, 0, 71, 74, 76, 74, 71, 69, 71, 0, 73, 76, 78, 81, 79, 78, 76, 0];
@@ -362,10 +362,18 @@
       btn.classList.toggle("playing", on);
       if (C.music && C.music.src && !useSynth) {
         if (!audio) {
-          audio = Object.assign(new Audio(C.music.src), { loop: true, volume: 0.6 });
+          audio = Object.assign(new Audio(C.music.src), { loop: true, volume: 0, preload: "auto" });
           audio.addEventListener("error", () => { useSynth = true; audio.pause(); if (on) startSynth(); });
         }
-        on ? audio.play().catch((e) => { if (e.name === "NotAllowedError") set(false); }) : audio.pause();
+        clearInterval(fade);
+        if (on) {
+          audio.play().catch((e) => { if (e.name === "NotAllowedError") set(false); });
+          // gentle 2s fade-in (iOS ignores volume, so it simply plays)
+          fade = setInterval(() => {
+            audio.volume = Math.min(0.6, audio.volume + 0.03);
+            if (audio.volume >= 0.6) clearInterval(fade);
+          }, 100);
+        } else audio.pause();
       } else if (on) startSynth();
       else { clearInterval(timer); ctx && ctx.suspend(); }
     }
