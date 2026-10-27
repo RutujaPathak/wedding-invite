@@ -4,3 +4,4 @@ test
 .DS_Store
 /WhatsApp*
 public/photos/WhatsApp*
+__pycache__/
