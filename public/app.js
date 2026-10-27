@@ -15,7 +15,6 @@
   if (guest) {
     txt("addressee", `For ${guest}`);
     txt("greeting", `Dear ${guest},`);
-    $("rsvpName").value = guest;
   }
   document.title = `${C.bride} & ${C.groom} — Wedding Invitation`;
 
@@ -35,7 +34,6 @@
   txt("heroDate", wedding.getDate());
   txt("heroTime", C.timeLabel || fmtTime(wedding));
   txt("heroYear", wedding.getFullYear());
-  txt("heroVenue", `${C.venue.name} · ${C.venue.short || C.venue.address}`);
   document.querySelectorAll(".flora").forEach((f) => (f.innerHTML = floraSVG()));
   $("flapPath").setAttribute("d", scallopFlap());
 
@@ -72,15 +70,6 @@
 
   // ── Story ──
   txt("storyQuote", C.story.quote);
-  (C.story.ticket || []).forEach(([k, v]) => {
-    const d = document.createElement("div");
-    d.innerHTML = "<span></span><b></b>";
-    d.querySelector("span").textContent = k;
-    d.querySelector("b").textContent = v;
-    if (/confirmed/i.test(v)) d.querySelector("b").className = "stamp";
-    $("ticketMeta").appendChild(d);
-  });
-  txt("storySign", `${C.bride} & ${C.groom}`);
 
   // ── Polaroids ──
   const pol = $("polaroids");
@@ -134,11 +123,11 @@
     const item = document.createElement("div");
     item.className = `tl-item ${side}`;
     item.innerHTML = `<div class="tl-node" style="--sx:${side === "left" ? 22 : -22}px">${iconSVG(e.icon)}</div>
-      <div class="tl-text"><p class="tl-time"></p><p class="tl-name"></p><p class="tl-date"></p><p class="tl-dress"></p></div>`;
+      <div class="tl-text"><p class="tl-time"></p><p class="tl-name"><b></b><span></span></p><p class="tl-date"></p></div>`;
     item.querySelector(".tl-time").textContent = fmtTime(d);
-    item.querySelector(".tl-name").textContent = e.name;
+    item.querySelector(".tl-name b").textContent = e.name;
+    item.querySelector(".tl-name span").textContent = e.theme ? `: ${e.theme}` : "";
     item.querySelector(".tl-date").textContent = fmtDate(d);
-    item.querySelector(".tl-dress").textContent = e.theme ? `Theme: ${e.theme}` : e.dress ? `Dress: ${e.dress}` : "";
     tl.appendChild(item);
   });
   let tlLen = 0;
@@ -224,93 +213,61 @@
     a.click();
   });
 
-  // ── RSVP ──
-  const form = $("rsvpForm");
-  const deadline = C.rsvpDeadline ? new Date(C.rsvpDeadline + "T00:00") : null;
-  txt("rsvpBy", deadline
-    ? `Kindly respond by ${deadline.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`
-    : "Please let us know if you will be able to join our celebration.");
-  $("eventPicks").innerHTML = C.events.map((e, i) =>
-    `<label><span><b></b><em></em></span><input type="checkbox" name="events" value="${i}" checked /><i></i></label>`).join("");
-  $("eventPicks").querySelectorAll("label").forEach((l, i) => {
-    l.querySelector("b").textContent = C.events[i].name;
-    l.querySelector("em").textContent = `${fmtDate(new Date(C.events[i].date))} · ${fmtTime(new Date(C.events[i].date))}`;
-  });
-  let guests = 1;
-  form.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => {
-    guests = Math.min(20, Math.max(1, guests + +b.dataset.step));
-    txt("guestCount", guests === 1 ? "1 guest" : `${guests} guests`);
-  }));
-  txt("guestCount", "1 guest");
-  form.addEventListener("change", () => form.classList.toggle("declined", form.elements.attending.value === "no"));
-
-  const rid = localStorage.getItem("rsvpId") || (crypto.randomUUID ? crypto.randomUUID() : "r" + Date.now().toString(36) + Math.random().toString(36).slice(2));
-  form.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    const msg = $("formMsg");
-    msg.className = "form-msg";
-    const name = form.elements.name.value.trim();
-    if (!name) { msg.textContent = "Please tell us your name 🙂"; msg.classList.add("err"); form.elements.name.focus(); return; }
-    const yes = form.elements.attending.value === "yes";
-    const body = {
-      id: rid, name, attending: yes,
-      guests: yes ? guests : 0,
-      events: yes ? [...form.querySelectorAll("[name=events]:checked")].map((c) => C.events[+c.value].name) : [],
-      wish: form.elements.wish.value.trim(), note: form.elements.note.value.trim(), invitedAs: guest,
-    };
-    $("rsvpSubmit").disabled = true;
-    msg.textContent = "Sending…";
-    try {
-      const r = await fetch("api/rsvp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Something went wrong");
-      localStorage.setItem("rsvpId", rid);
-      showThanks(yes, name);
-      loadWishes();
-    } catch (e) {
-      msg.textContent = e.message + " — please try again.";
-      msg.classList.add("err");
-    } finally {
-      $("rsvpSubmit").disabled = false;
+  // ── Scratch to reveal the date ──
+  const sc = $("scratch"), sctx = sc.getContext("2d", { willReadFrequently: true });
+  let scratched = false, revealed = false, moves = 0, last = null;
+  function paintFoil() {
+    if (scratched) return;
+    const r = sc.parentElement.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+    sc.width = r.width * dpr; sc.height = r.height * dpr;
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const g = sctx.createLinearGradient(0, 0, r.width, r.height);
+    g.addColorStop(0, "#e9c3b4"); g.addColorStop(0.35, "#d9a77d"); g.addColorStop(0.55, "#f3dccb");
+    g.addColorStop(0.75, "#cf9a72"); g.addColorStop(1, "#e7bfae");
+    sctx.globalCompositeOperation = "source-over";
+    sctx.fillStyle = g;
+    sctx.beginPath(); sctx.roundRect ? sctx.roundRect(0, 0, r.width, r.height, 14) : sctx.rect(0, 0, r.width, r.height); sctx.fill();
+    for (let i = 0; i < 90; i++) {
+      sctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.5})`;
+      sctx.fillRect(Math.random() * r.width, Math.random() * r.height, 1.5, 1.5);
     }
-  });
-  function showThanks(yes, name) {
-    form.hidden = true;
-    let t = document.querySelector(".thanks-card");
-    if (!t) {
-      t = document.createElement("div");
-      t.className = "thanks-card";
-      form.after(t);
-    }
-    t.innerHTML = `<p class="script"></p><p class="sub"></p><button class="btn ghost" type="button">Edit response</button>`;
-    t.querySelector(".script").textContent = yes ? "Thank you!" : "We'll miss you";
-    t.querySelector(".sub").textContent = yes
-      ? `${name.split(" ")[0]}, we can't wait to celebrate with you.`
-      : `Thank you for letting us know, ${name.split(" ")[0]}. You'll be in our hearts.`;
-    t.querySelector("button").onclick = () => { t.remove(); form.hidden = false; };
-    if (yes) confetti();
+    sctx.fillStyle = "rgba(110,58,57,.75)";
+    sctx.textAlign = "center"; sctx.textBaseline = "middle";
+    sctx.font = "500 15px Cinzel, serif";
+    sctx.fillText("♡  SCRATCH HERE  ♡", r.width / 2, r.height / 2);
   }
-
-  // ── Wishes wall ──
-  async function loadWishes() {
-    try {
-      const list = await (await fetch("api/wishes")).json();
-      if (!list.length) return;
-      const row = $("wishRow");
-      row.innerHTML = "";
-      const reps = list.length < 4 ? 4 : 2;
-      for (let k = 0; k < reps; k++) for (const w of list) {
-        const c = document.createElement("div");
-        c.className = "wish";
-        c.innerHTML = "<p></p><b></b>";
-        c.querySelector("p").textContent = `“${w.wish}”`;
-        c.querySelector("b").textContent = w.name;
-        row.appendChild(c);
-      }
-      row.style.setProperty("--dur", list.length * reps * 4 + "s");
-      $("wishesSection").hidden = false;
-      io.observe($("wishesSection"));
-    } catch (_) { /* offline / static hosting: just hide */ }
+  function scratchAt(x, y) {
+    sctx.globalCompositeOperation = "destination-out";
+    sctx.lineWidth = 44; sctx.lineCap = "round";
+    sctx.beginPath();
+    sctx.moveTo(last ? last[0] : x, last ? last[1] : y);
+    sctx.lineTo(x, y);
+    sctx.stroke();
+    last = [x, y];
+    scratched = true;
+    if (++moves % 8 === 0 && clearedRatio() > 0.45) reveal();
   }
+  function clearedRatio() {
+    const d = sctx.getImageData(0, 0, sc.width, sc.height).data;
+    let clear = 0, n = 0;
+    for (let i = 3; i < d.length; i += 4 * 24) { n++; if (d[i] === 0) clear++; }
+    return clear / n;
+  }
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    sc.classList.add("done");
+    $("scratchHint").textContent = "Save the Date ♡";
+    $("scratchHint").classList.add("revealed");
+    const r = sc.getBoundingClientRect();
+    confetti(r.left + r.width / 2, r.top + r.height / 2);
+  }
+  const pt = (e) => { const r = sc.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  sc.addEventListener("pointerdown", (e) => { sc.setPointerCapture(e.pointerId); last = null; scratchAt(...pt(e)); });
+  sc.addEventListener("pointermove", (e) => { if (sc.hasPointerCapture(e.pointerId)) scratchAt(...pt(e)); });
+  sc.addEventListener("pointerup", () => { last = null; });
+  $("scratchHint").addEventListener("click", reveal);
+  paintFoil();
 
   // ── Countdown ──
   const units = Object.fromEntries([...document.querySelectorAll("#clock b")].map((b) => [b.dataset.u, b]));
@@ -334,19 +291,17 @@
   }), { threshold: 0.15 });
   document.querySelectorAll(".reveal").forEach((s) => io.observe(s));
 
-  function layout() { layoutPolaroids(); layoutTimeline(); }
+  function layout() { layoutPolaroids(); layoutTimeline(); paintFoil(); }
   addEventListener("resize", layout);
   addEventListener("scroll", drawTimeline, { passive: true });
   document.fonts && document.fonts.ready.then(layout);
   layout();
-  loadWishes();
 
-  // ── Confetti of petals on RSVP ──
-  function confetti() {
+  // ── Burst of petals (scratch reveal) ──
+  function confetti(x = innerWidth / 2, y = innerHeight * 0.6) {
     for (let i = 0; i < 40; i++) {
       const p = document.createElement("i");
       p.className = "petal";
-      const x = innerWidth / 2, y = innerHeight * 0.6;
       Object.assign(p.style, { left: x + "px", top: y + "px", animation: "none", transition: "transform 1.6s cubic-bezier(.1,.7,.3,1), opacity 1.6s" });
       $("petals").appendChild(p);
       requestAnimationFrame(() => requestAnimationFrame(() => {

@@ -60,48 +60,43 @@
         <div class="flora bl"></div><div class="flora br"></div>
         <div class="arch-inner">
           <p class="invocation step" id="invocation" style="--d:.1s"></p>
-          <p class="kicker step" style="--d:.25s">Wedding Invitation</p>
-          <p class="greeting step" id="greeting" style="--d:.4s"></p>
-          <p class="host step" id="hostLine" style="--d:.55s"></p>
+          <p class="greeting step" id="greeting" style="--d:.3s"></p>
+          <p class="host step" id="hostLine" style="--d:.45s"></p>
           <h1 class="names">
-            <span class="person step" style="--d:.8s">
-              <span class="script" id="bride"></span>
+            <span class="person step" style="--d:.7s">
+              <span class="first" id="bride"></span>
               <span class="surname" id="brideSurname"></span>
               <span class="parents" id="brideParents"></span>
             </span>
-            <span class="amp step" style="--d:1.1s">&amp;</span>
-            <span class="person step" style="--d:1.3s">
-              <span class="script" id="groom"></span>
+            <span class="amp step" style="--d:1s">&amp;</span>
+            <span class="person step" style="--d:1.2s">
+              <span class="first" id="groom"></span>
               <span class="surname" id="groomSurname"></span>
               <span class="parents" id="groomParents"></span>
             </span>
           </h1>
-          <div class="dateblock step" style="--d:1.6s">
-            <p class="month" id="heroMonth"></p>
-            <div class="row">
-              <span id="heroDay"></span>
-              <strong id="heroDate"></strong>
-              <span id="heroTime"></span>
+          <div class="scratch-wrap step" style="--d:1.5s">
+            <div class="dateblock" id="dateblock">
+              <p class="month" id="heroMonth"></p>
+              <div class="row">
+                <span id="heroDay"></span>
+                <strong id="heroDate"></strong>
+                <span id="heroTime"></span>
+              </div>
+              <p class="year" id="heroYear"></p>
             </div>
-            <p class="year" id="heroYear"></p>
+            <canvas id="scratch" aria-label="Scratch to reveal the date"></canvas>
           </div>
-          <p class="address step" id="heroVenue" style="--d:1.8s"></p>
-          <p class="save script step" style="--d:2s">Save the Date</p>
+          <p class="scratch-hint step" id="scratchHint" style="--d:1.7s">✦ Scratch to reveal the date ✦</p>
         </div>
       </div>
       <p class="scroll-cue">scroll <span>⌄</span></p>
     </section>
 
-    <section class="story reveal">
-      <p class="kicker">How it all began</p>
-      <h2>Our Story</h2>
+    <section class="saying reveal">
       <svg class="div"><use href="#divider" /></svg>
-      <div class="ticket-holder"><div class="ticket">
-        <div class="ticket-strip"></div>
-        <p class="quote" id="storyQuote"></p>
-        <div class="ticket-meta" id="ticketMeta"></div>
-        <p class="script sign" id="storySign"></p>
-      </div></div>
+      <p class="quote" id="storyQuote"></p>
+      <svg class="div"><use href="#divider" /></svg>
     </section>
 
     <section class="moments reveal">
@@ -124,22 +119,6 @@
       </div>
     </section>
 
-    <section class="venue reveal">
-      <p class="kicker">Where we unite</p>
-      <h2>Our Venue</h2>
-      <svg class="div"><use href="#divider" /></svg>
-      <p class="sub" id="venueDesc"></p>
-      <p class="kicker small">Celebration venue</p>
-      <h3 id="venueName"></h3>
-      <p class="address" id="venueAddr"></p>
-      <div class="palace" id="palace"></div>
-      <div class="qr-wrap">
-        <img id="qr" alt="QR code to venue location" width="120" height="120" />
-        <p class="kicker small">Scan to navigate</p>
-        <a class="btn" id="directions" target="_blank" rel="noopener">➤ Get Directions</a>
-      </div>
-    </section>
-
     <section class="date reveal">
       <p class="kicker">Mark your calendar</p>
       <h2>The Date</h2>
@@ -156,49 +135,6 @@
       </div>
     </section>
 
-    <section class="rsvp reveal" id="rsvp">
-      <div class="card">
-        <p class="kicker">Save the date</p>
-        <h2>We'd love to<br />celebrate with you</h2>
-        <svg class="div"><use href="#divider" /></svg>
-        <p class="sub" id="rsvpBy"></p>
-        <form id="rsvpForm" novalidate>
-          <label>Your full name *<input name="name" id="rsvpName" required maxlength="80" placeholder="Enter your name" /></label>
-          <fieldset class="choice">
-            <legend>Will you be attending? *</legend>
-            <label><input type="radio" name="attending" value="yes" checked /><span>✓ Joyfully accept</span></label>
-            <label><input type="radio" name="attending" value="no" /><span>Regretfully decline</span></label>
-          </fieldset>
-          <div class="when-yes">
-            <fieldset class="stepper">
-              <legend>Total guests attending</legend>
-              <button type="button" data-step="-1" aria-label="fewer">−</button>
-              <output id="guestCount">1</output>
-              <button type="button" data-step="1" aria-label="more">+</button>
-              <small>Including yourself</small>
-            </fieldset>
-            <fieldset class="events-pick">
-              <legend>Select events you will attend</legend>
-              <div id="eventPicks"></div>
-            </fieldset>
-          </div>
-          <label>A wish for the couple <small>(appears on the wishes wall)</small>
-            <textarea name="wish" maxlength="300" rows="2" placeholder="Share a warm wish…"></textarea></label>
-          <label>Anything we should know? <small>(private — dietary needs etc.)</small>
-            <textarea name="note" maxlength="300" rows="2" placeholder="Optional"></textarea></label>
-          <button class="btn wide" type="submit" id="rsvpSubmit">Submit RSVP ➝</button>
-          <p class="form-msg" id="formMsg" role="status"></p>
-        </form>
-      </div>
-    </section>
-
-    <section class="wishes reveal" id="wishesSection" hidden>
-      <p class="kicker">With love from</p>
-      <h2>Wishes Wall</h2>
-      <svg class="div"><use href="#divider" /></svg>
-      <div class="wish-track"><div class="wish-row" id="wishRow"></div></div>
-    </section>
-
     <section class="countdown reveal">
       <p class="kicker">Waiting for the big day</p>
       <h2>The Countdown</h2>
@@ -211,6 +147,21 @@
         <div><b data-u="s">0</b><span>Seconds</span></div>
       </div>
       <div class="mandap" id="mandap"></div>
+    </section>
+
+    <section class="venue reveal">
+      <p class="kicker">Where we unite</p>
+      <h2>Our Venue</h2>
+      <svg class="div"><use href="#divider" /></svg>
+      <p class="sub" id="venueDesc"></p>
+      <h3 id="venueName"></h3>
+      <p class="address" id="venueAddr"></p>
+      <div class="palace" id="palace"></div>
+      <div class="qr-wrap">
+        <img id="qr" alt="QR code to venue location" width="120" height="120" />
+        <p class="kicker small">Scan to navigate</p>
+        <a class="btn" id="directions" target="_blank" rel="noopener">➤ Get Directions</a>
+      </div>
       <p class="hashtag" id="hashtag"></p>
       <p class="script thanks" id="closing"></p>
     </section>

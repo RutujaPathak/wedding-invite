@@ -29,8 +29,6 @@ window.WEDDING = {
 
   story: {
     quote: "Two hearts, one promise,\nSeven steps, seven vows, one eternal togetherness.",
-    // Rows on the ticket stub: [label, value]
-    ticket: [["Steps", "Seven"], ["Vows", "Seven"], ["Status", "Soulmates"], ["Booking", "Confirmed"]],
   },
 
   // Put image files in public/photos/ and list them here.
@@ -52,14 +50,11 @@ window.WEDDING = {
 
   venue: {
     name: "Abhishek Banquets",
-    short: "Wagholi, Pune",                // shown on the opening card
     description: "Where two families come together as one.",
     address: "Gat No 1420, Near Wageshwar Temple, Wagholi Bhavdi Road, Lohegaon Rd, Wagholi, Pune, Maharashtra 412207",
     // Paste a Google Maps share link, or leave empty to search by name + address
     mapsUrl: "",
   },
-
-  rsvpDeadline: "2026-12-20",
 
   // Background music: drop the song into public/ as music.mp3.
   // If the file is missing, a soft built-in music-box melody plays instead.
