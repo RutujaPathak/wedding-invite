@@ -357,22 +357,34 @@
       next = ctx.currentTime + 0.1;
       timer = setInterval(schedule, 100);
     }
+    // Skip the song's quiet intro: start (and loop back) at music.start seconds
+    const startAt = (C.music && C.music.start) || 0;
+    let firstPlay = true;
+    function seekToStart() {
+      if (!startAt) return;
+      if (audio.readyState >= 1) audio.currentTime = startAt;
+      else audio.addEventListener("loadedmetadata", () => (audio.currentTime = startAt), { once: true });
+    }
+    // Start downloading right away so the song is ready by the time the envelope is tapped
+    if (C.music && C.music.src) {
+      audio = Object.assign(new Audio(C.music.src), { volume: 0.25, preload: "auto" });
+      audio.addEventListener("error", () => { useSynth = true; audio.pause(); if (on) startSynth(); });
+      audio.addEventListener("ended", () => { seekToStart(); audio.play(); });
+      audio.load();
+    }
     function set(v) {
       on = v;
       btn.classList.toggle("playing", on);
-      if (C.music && C.music.src && !useSynth) {
-        if (!audio) {
-          audio = Object.assign(new Audio(C.music.src), { loop: true, volume: 0, preload: "auto" });
-          audio.addEventListener("error", () => { useSynth = true; audio.pause(); if (on) startSynth(); });
-        }
+      if (audio && !useSynth) {
         clearInterval(fade);
         if (on) {
+          if (firstPlay) { seekToStart(); firstPlay = false; }
           audio.play().catch((e) => { if (e.name === "NotAllowedError") set(false); });
-          // gentle 2s fade-in (iOS ignores volume, so it simply plays)
+          // quick fade-in (iOS ignores volume, so it simply plays)
           fade = setInterval(() => {
-            audio.volume = Math.min(0.6, audio.volume + 0.03);
-            if (audio.volume >= 0.6) clearInterval(fade);
-          }, 100);
+            audio.volume = Math.min(0.7, audio.volume + 0.05);
+            if (audio.volume >= 0.7) clearInterval(fade);
+          }, 80);
         } else audio.pause();
       } else if (on) startSynth();
       else { clearInterval(timer); ctx && ctx.suspend(); }

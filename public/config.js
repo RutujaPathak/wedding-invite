@@ -58,5 +58,6 @@ window.WEDDING = {
 
   // Background music: drop the song into public/ as music.mp3.
   // If the file is missing, a soft built-in music-box melody plays instead.
-  music: { src: "music.mp3?v=2" },     // bump v= after replacing the file
+  // start: seconds to skip (this song has a ~12s quiet intro)
+  music: { src: "music.mp3?v=2", start: 12.5 },     // bump v= after replacing the file
 };
