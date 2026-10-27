@@ -1,0 +1,6 @@
+data/
+*.mp4
+test
+.DS_Store
+/WhatsApp*
+public/photos/WhatsApp*

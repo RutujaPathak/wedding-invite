@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: rutuja-himanshu-wedding
+    runtime: python
+    plan: free
+    buildCommand: echo "no dependencies"
+    startCommand: python3 server.py
+    envVars:
+      - key: ADMIN_KEY
+        generateValue: true
+      - key: SHEET_URL
+        sync: false
+      - key: SHEET_SECRET
+        sync: false

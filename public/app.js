@@ -1,0 +1,420 @@
+(function () {
+  const C = window.WEDDING;
+  const $ = (id) => document.getElementById(id);
+  const txt = (id, v) => ($(id).textContent = v);
+  const wedding = new Date(C.weddingDate);
+
+  const fmtTime = (d) => d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const fmtDate = (d) => d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  const pad = (n) => String(n).padStart(2, "0");
+  const icsStamp = (d) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  const mapsUrl = C.venue.mapsUrl || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${C.venue.name}, ${C.venue.address}`);
+
+  // ── Personalised guest link: ?to=Aditi%20%26%20Family ──
+  const guest = (new URLSearchParams(location.search).get("to") || "").trim().slice(0, 60);
+  if (guest) {
+    txt("addressee", `For ${guest}`);
+    txt("greeting", `Dear ${guest},`);
+    $("rsvpName").value = guest;
+  }
+  document.title = `${C.bride} & ${C.groom} — Wedding Invitation`;
+
+  // ── Hero ──
+  txt("sealText", C.initials);
+  txt("envCardNames", `${C.bride} & ${C.groom}`);
+  txt("invocation", C.invocation || "");
+  txt("bride", C.bride);
+  txt("groom", C.groom);
+  txt("brideSurname", C.brideSurname || "");
+  txt("groomSurname", C.groomSurname || "");
+  txt("brideParents", C.brideParents || "");
+  txt("groomParents", C.groomParents || "");
+  txt("hostLine", C.hostLine);
+  txt("heroMonth", wedding.toLocaleDateString("en-US", { month: "long" }));
+  txt("heroDay", wedding.toLocaleDateString("en-US", { weekday: "long" }));
+  txt("heroDate", wedding.getDate());
+  txt("heroTime", C.timeLabel || fmtTime(wedding));
+  txt("heroYear", wedding.getFullYear());
+  txt("heroVenue", `${C.venue.name} · ${C.venue.short || C.venue.address}`);
+  document.querySelectorAll(".flora").forEach((f) => (f.innerHTML = floraSVG()));
+  $("flapPath").setAttribute("d", scallopFlap());
+
+  // ── Petals ──
+  const petals = $("petals");
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElement("i");
+    el.className = "petal";
+    el.style.left = Math.random() * 100 + "%";
+    el.style.setProperty("--t", 9 + Math.random() * 9 + "s");
+    el.style.setProperty("--delay", -Math.random() * 18 + "s");
+    el.style.setProperty("--sway", (Math.random() * 120 - 60).toFixed(0) + "px");
+    el.style.scale = 0.6 + Math.random() * 0.7;
+    petals.appendChild(el);
+  }
+
+  // ── Envelope open sequence ──
+  const env = $("envelope");
+  env.addEventListener("click", () => {
+    if (env.classList.contains("open")) return;
+    env.classList.add("open");
+    Music.start();
+    setTimeout(() => {
+      $("intro").classList.add("gone");
+      document.body.classList.remove("locked");
+      document.body.classList.add("opened");
+      $("invite").removeAttribute("aria-hidden");
+      $("music").hidden = false;
+      window.scrollTo(0, 0);
+      layout();
+    }, 2300);
+    setTimeout(() => $("intro").remove(), 3600);
+  }, { once: false });
+
+  // ── Story ──
+  txt("storyQuote", C.story.quote);
+  (C.story.ticket || []).forEach(([k, v]) => {
+    const d = document.createElement("div");
+    d.innerHTML = "<span></span><b></b>";
+    d.querySelector("span").textContent = k;
+    d.querySelector("b").textContent = v;
+    if (/confirmed/i.test(v)) d.querySelector("b").className = "stamp";
+    $("ticketMeta").appendChild(d);
+  });
+  txt("storySign", `${C.bride} & ${C.groom}`);
+
+  // ── Polaroids ──
+  const pol = $("polaroids");
+  C.photos.forEach((ph, i) => {
+    const f = document.createElement("figure");
+    f.className = "polaroid" + (ph.wide ? " wide" : "");
+    f.style.setProperty("--r", [-6, 5, 4, -5, -3, 6][i % 6] + "deg");
+    f.style.transitionDelay = 0.15 * i + "s";
+    const d = document.createElement("div");
+    d.className = "ph" + (ph.src ? "" : " empty");
+    if (ph.src) d.style.backgroundImage = `url("photos/${encodeURI(ph.src)}")`;
+    if (ph.pos) d.style.backgroundPosition = ph.pos;
+    const cap = document.createElement("figcaption");
+    cap.textContent = ph.caption || "♡";
+    f.append(d, cap);
+    f.addEventListener("click", () => {
+      const was = f.classList.contains("focus");
+      pol.querySelectorAll(".focus").forEach((x) => x.classList.remove("focus"));
+      if (!was) f.classList.add("focus");
+    });
+    pol.appendChild(f);
+  });
+  function layoutPolaroids() {
+    const W = pol.clientWidth;
+    let bottom = 0, top = 0, col = 0;
+    [...pol.children].forEach((f, i, all) => {
+      if (f.classList.contains("wide") || (col === 0 && i === all.length - 1)) {
+        // full-row photo, centred
+        if (col) { top += W * 0.74; col = 0; }
+        const wide = f.classList.contains("wide");
+        f.style.setProperty("--x", wide ? "11%" : "24%");
+        f.style.setProperty("--y", top + "px");
+        bottom = Math.max(bottom, top + f.offsetHeight);
+        top += f.offsetHeight * 0.92;
+        return;
+      }
+      f.style.setProperty("--x", col ? "44%" : "3%");
+      f.style.setProperty("--y", top + col * W * 0.1 + "px");
+      bottom = Math.max(bottom, top + col * W * 0.1 + f.offsetHeight);
+      if (col) top += W * 0.74 * 0.92;
+      col = 1 - col;
+    });
+    pol.style.height = bottom + 20 + "px";
+  }
+
+  // ── Timeline ──
+  const tl = $("timeline");
+  C.events.forEach((e, i) => {
+    const d = new Date(e.date);
+    const side = i % 2 ? "right" : "left";
+    const item = document.createElement("div");
+    item.className = `tl-item ${side}`;
+    item.innerHTML = `<div class="tl-node" style="--sx:${side === "left" ? 22 : -22}px">${iconSVG(e.icon)}</div>
+      <div class="tl-text"><p class="tl-time"></p><p class="tl-name"></p><p class="tl-date"></p><p class="tl-dress"></p></div>`;
+    item.querySelector(".tl-time").textContent = fmtTime(d);
+    item.querySelector(".tl-name").textContent = e.name;
+    item.querySelector(".tl-date").textContent = fmtDate(d);
+    item.querySelector(".tl-dress").textContent = e.theme ? `Theme: ${e.theme}` : e.dress ? `Dress: ${e.dress}` : "";
+    tl.appendChild(item);
+  });
+  let tlLen = 0;
+  function layoutTimeline() {
+    const box = tl.getBoundingClientRect();
+    const pts = [...tl.querySelectorAll(".tl-item")].map((it) => {
+      const n = it.querySelector(".tl-node");
+      const sx = parseFloat(n.style.getPropertyValue("--sx"));
+      return [n.offsetLeft + n.offsetWidth / 2 + sx, it.offsetTop + it.offsetHeight / 2];
+    });
+    if (!pts.length) return;
+    let [px, py] = [box.width / 2, 0];
+    let d = `M${px} ${py}`;
+    for (const [x, y] of [...pts, [box.width / 2, tl.offsetHeight]]) {
+      const my = (py + y) / 2;
+      d += ` C ${px} ${my}, ${x} ${my}, ${x} ${y}`;
+      [px, py] = [x, y];
+    }
+    $("tlSvg").setAttribute("viewBox", `0 0 ${box.width} ${tl.offsetHeight}`);
+    $("tlTrack").setAttribute("d", d);
+    $("tlDraw").setAttribute("d", d);
+    tlLen = $("tlDraw").getTotalLength();
+    $("tlDraw").style.strokeDasharray = tlLen;
+    drawTimeline();
+  }
+  function drawTimeline() {
+    const r = tl.getBoundingClientRect();
+    const p = Math.min(1, Math.max(0, (innerHeight * 0.7 - r.top) / r.height));
+    $("tlDraw").style.strokeDashoffset = tlLen * (1 - p);
+    tl.querySelectorAll(".tl-item").forEach((it) => {
+      it.classList.toggle("on", (it.offsetTop + it.offsetHeight / 2) / r.height <= p + 0.02);
+    });
+  }
+
+  // ── Venue ──
+  txt("venueDesc", C.venue.description);
+  txt("venueName", C.venue.name);
+  txt("venueAddr", C.venue.address);
+  $("directions").href = mapsUrl;
+  $("qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=0&color=6e3a39&data=" + encodeURIComponent(mapsUrl);
+  $("qr").onerror = () => ($("qr").style.display = "none");
+  $("palace").innerHTML = palaceSVG();
+  $("mandap").innerHTML = mandapSVG();
+  document.querySelectorAll(".ink path, .ink circle").forEach((el) => el.setAttribute("pathLength", "1"));
+
+  // ── Calendar ──
+  (function () {
+    const y = wedding.getFullYear(), m = wedding.getMonth();
+    txt("calHead", wedding.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).toUpperCase());
+    txt("calFoot", `${wedding.toLocaleDateString("en-US", { month: "long" }).toUpperCase()} · ${y}`);
+    const g = $("calGrid");
+    let h = "SMTWTFS".split("").map((d) => `<span class="dow">${d}</span>`).join("");
+    const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), prev = new Date(y, m, 0).getDate();
+    for (let i = first - 1; i >= 0; i--) h += `<span class="d muted">${prev - i}</span>`;
+    for (let d = 1; d <= days; d++) h += `<span class="d${d === wedding.getDate() ? " wed" : ""}">${d}</span>`;
+    const tail = (7 - ((first + days) % 7)) % 7;
+    for (let d = 1; d <= tail; d++) h += `<span class="d muted">${d}</span>`;
+    g.innerHTML = h;
+  })();
+
+  // ── Add to calendar ──
+  const main = C.events.find((e) => +new Date(e.date) === +wedding) || C.events[0];
+  const endOf = (e) => (e.end ? new Date(e.end) : new Date(+new Date(e.date) + 3 * 3600e3));
+  const title = (e) => `${e.name} — ${C.bride} & ${C.groom}`;
+  $("gcal").href = "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+    `&text=${encodeURIComponent(title(main))}&dates=${icsStamp(new Date(main.date))}/${icsStamp(endOf(main))}` +
+    `&details=${encodeURIComponent(location.origin + location.pathname)}&location=${encodeURIComponent(`${C.venue.name}, ${C.venue.address}`)}`;
+  $("ics").addEventListener("click", () => {
+    const esc = (s) => s.replace(/([,;\\])/g, "\\$1");
+    const ev = C.events.map((e, i) => [
+      "BEGIN:VEVENT", `UID:wedding-${i}-${icsStamp(new Date(e.date))}@invite`, `DTSTAMP:${icsStamp(new Date())}`,
+      `DTSTART:${icsStamp(new Date(e.date))}`, `DTEND:${icsStamp(endOf(e))}`,
+      `SUMMARY:${esc(title(e))}`, `LOCATION:${esc(`${C.venue.name}, ${C.venue.address}`)}`, "END:VEVENT",
+    ].join("\r\n"));
+    const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//WeddingInvite//EN", ...ev, "END:VCALENDAR"].join("\r\n");
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+      location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+    a.download = `${C.bride}-${C.groom}-wedding.ics`;
+    a.click();
+  });
+
+  // ── RSVP ──
+  const form = $("rsvpForm");
+  const deadline = C.rsvpDeadline ? new Date(C.rsvpDeadline + "T00:00") : null;
+  txt("rsvpBy", deadline
+    ? `Kindly respond by ${deadline.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`
+    : "Please let us know if you will be able to join our celebration.");
+  $("eventPicks").innerHTML = C.events.map((e, i) =>
+    `<label><span><b></b><em></em></span><input type="checkbox" name="events" value="${i}" checked /><i></i></label>`).join("");
+  $("eventPicks").querySelectorAll("label").forEach((l, i) => {
+    l.querySelector("b").textContent = C.events[i].name;
+    l.querySelector("em").textContent = `${fmtDate(new Date(C.events[i].date))} · ${fmtTime(new Date(C.events[i].date))}`;
+  });
+  let guests = 1;
+  form.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => {
+    guests = Math.min(20, Math.max(1, guests + +b.dataset.step));
+    txt("guestCount", guests === 1 ? "1 guest" : `${guests} guests`);
+  }));
+  txt("guestCount", "1 guest");
+  form.addEventListener("change", () => form.classList.toggle("declined", form.elements.attending.value === "no"));
+
+  const rid = localStorage.getItem("rsvpId") || (crypto.randomUUID ? crypto.randomUUID() : "r" + Date.now().toString(36) + Math.random().toString(36).slice(2));
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const msg = $("formMsg");
+    msg.className = "form-msg";
+    const name = form.elements.name.value.trim();
+    if (!name) { msg.textContent = "Please tell us your name 🙂"; msg.classList.add("err"); form.elements.name.focus(); return; }
+    const yes = form.elements.attending.value === "yes";
+    const body = {
+      id: rid, name, attending: yes,
+      guests: yes ? guests : 0,
+      events: yes ? [...form.querySelectorAll("[name=events]:checked")].map((c) => C.events[+c.value].name) : [],
+      wish: form.elements.wish.value.trim(), note: form.elements.note.value.trim(), invitedAs: guest,
+    };
+    $("rsvpSubmit").disabled = true;
+    msg.textContent = "Sending…";
+    try {
+      const r = await fetch("api/rsvp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Something went wrong");
+      localStorage.setItem("rsvpId", rid);
+      showThanks(yes, name);
+      loadWishes();
+    } catch (e) {
+      msg.textContent = e.message + " — please try again.";
+      msg.classList.add("err");
+    } finally {
+      $("rsvpSubmit").disabled = false;
+    }
+  });
+  function showThanks(yes, name) {
+    form.hidden = true;
+    let t = document.querySelector(".thanks-card");
+    if (!t) {
+      t = document.createElement("div");
+      t.className = "thanks-card";
+      form.after(t);
+    }
+    t.innerHTML = `<p class="script"></p><p class="sub"></p><button class="btn ghost" type="button">Edit response</button>`;
+    t.querySelector(".script").textContent = yes ? "Thank you!" : "We'll miss you";
+    t.querySelector(".sub").textContent = yes
+      ? `${name.split(" ")[0]}, we can't wait to celebrate with you.`
+      : `Thank you for letting us know, ${name.split(" ")[0]}. You'll be in our hearts.`;
+    t.querySelector("button").onclick = () => { t.remove(); form.hidden = false; };
+    if (yes) confetti();
+  }
+
+  // ── Wishes wall ──
+  async function loadWishes() {
+    try {
+      const list = await (await fetch("api/wishes")).json();
+      if (!list.length) return;
+      const row = $("wishRow");
+      row.innerHTML = "";
+      const reps = list.length < 4 ? 4 : 2;
+      for (let k = 0; k < reps; k++) for (const w of list) {
+        const c = document.createElement("div");
+        c.className = "wish";
+        c.innerHTML = "<p></p><b></b>";
+        c.querySelector("p").textContent = `“${w.wish}”`;
+        c.querySelector("b").textContent = w.name;
+        row.appendChild(c);
+      }
+      row.style.setProperty("--dur", list.length * reps * 4 + "s");
+      $("wishesSection").hidden = false;
+      io.observe($("wishesSection"));
+    } catch (_) { /* offline / static hosting: just hide */ }
+  }
+
+  // ── Countdown ──
+  const units = Object.fromEntries([...document.querySelectorAll("#clock b")].map((b) => [b.dataset.u, b]));
+  function tick() {
+    let s = Math.max(0, Math.floor((wedding - Date.now()) / 1000));
+    const v = { d: Math.floor(s / 86400), h: Math.floor((s % 86400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 };
+    for (const k in v) units[k].textContent = k === "d" ? v[k] : pad(v[k]);
+  }
+  tick();
+  setInterval(tick, 1000);
+  txt("hashtag", C.hashtag || "");
+  txt("closing", C.closing || "See you there!");
+  txt("photosCap", C.photosCaption || "");
+
+  // ── Scroll reveal ──
+  const io = new IntersectionObserver((ents) => ents.forEach((e) => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add("in");
+    e.target.querySelectorAll(".palace, .mandap").forEach((x) => x.classList.add("drawn"));
+    io.unobserve(e.target);
+  }), { threshold: 0.15 });
+  document.querySelectorAll(".reveal").forEach((s) => io.observe(s));
+
+  function layout() { layoutPolaroids(); layoutTimeline(); }
+  addEventListener("resize", layout);
+  addEventListener("scroll", drawTimeline, { passive: true });
+  document.fonts && document.fonts.ready.then(layout);
+  layout();
+  loadWishes();
+
+  // ── Confetti of petals on RSVP ──
+  function confetti() {
+    for (let i = 0; i < 40; i++) {
+      const p = document.createElement("i");
+      p.className = "petal";
+      const x = innerWidth / 2, y = innerHeight * 0.6;
+      Object.assign(p.style, { left: x + "px", top: y + "px", animation: "none", transition: "transform 1.6s cubic-bezier(.1,.7,.3,1), opacity 1.6s" });
+      $("petals").appendChild(p);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const a = Math.random() * Math.PI * 2, r = 120 + Math.random() * 220;
+        p.style.transform = `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r - 120}px) rotate(${Math.random() * 720}deg)`;
+        p.style.opacity = 0;
+      }));
+      setTimeout(() => p.remove(), 1800);
+    }
+  }
+
+  // ── Music: an mp3 if configured, otherwise a generated music-box melody ──
+  const Music = (function () {
+    const btn = $("music");
+    let on = false, useSynth = false, audio, ctx, timer, next = 0, step = 0;
+    // I–vi–IV–V in D major, arpeggiated
+    const chords = [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]];
+    const melody = [78, 76, 74, 76, 78, 81, 78, 0, 74, 76, 78, 76, 74, 71, 74, 0, 71, 74, 76, 74, 71, 69, 71, 0, 73, 76, 78, 81, 79, 78, 76, 0];
+    const hz = (n) => 440 * Math.pow(2, (n - 69) / 12);
+    let out;
+    function bell(note, t, vol, dur) {
+      const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o2.type = "sine";
+      o.frequency.value = hz(note); o2.frequency.value = hz(note) * 3.01;
+      const g2 = ctx.createGain(); g2.gain.value = 0.12;
+      o.connect(g); o2.connect(g2).connect(g); g.connect(out);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.start(t); o2.start(t); o.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+    }
+    function schedule() {
+      const eighth = 60 / 72 / 2;
+      while (next < ctx.currentTime + 0.4) {
+        const bar = Math.floor(step / 8) % 4, ch = chords[bar], i = step % 8;
+        if (i === 0) bell(ch[0] - 12, next, 0.18, 2.6);
+        bell([ch[0], ch[1], ch[2], ch[1] + 12, ch[2], ch[1] + 12, ch[0] + 12, ch[2]][i], next, 0.06, 1.4);
+        const m = melody[step % melody.length];
+        if (m && step >= 32) bell(m, next, 0.08, 1.8);
+        next += eighth; step++;
+      }
+    }
+    function startSynth() {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      if (!out) {
+        out = ctx.createGain(); out.gain.value = 0.9;
+        const delay = ctx.createDelay(), fb = ctx.createGain(), wet = ctx.createGain();
+        delay.delayTime.value = 0.42; fb.gain.value = 0.35; wet.gain.value = 0.3;
+        out.connect(ctx.destination); out.connect(delay); delay.connect(fb).connect(delay); delay.connect(wet).connect(ctx.destination);
+      }
+      ctx.resume();
+      clearInterval(timer);
+      next = ctx.currentTime + 0.1;
+      timer = setInterval(schedule, 100);
+    }
+    function set(v) {
+      on = v;
+      btn.classList.toggle("playing", on);
+      if (C.music && C.music.src && !useSynth) {
+        if (!audio) {
+          audio = Object.assign(new Audio(C.music.src), { loop: true, volume: 0.6 });
+          audio.addEventListener("error", () => { useSynth = true; audio.pause(); if (on) startSynth(); });
+        }
+        on ? audio.play().catch((e) => { if (e.name === "NotAllowedError") set(false); }) : audio.pause();
+      } else if (on) startSynth();
+      else { clearInterval(timer); ctx && ctx.suspend(); }
+    }
+    btn.addEventListener("click", () => set(!on));
+    return { start: () => set(true) };
+  })();
+})();
